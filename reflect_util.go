@@ -3,6 +3,7 @@ package reflectutil
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"reflect"
 )
 
@@ -114,4 +115,115 @@ func DeepGetStructFields(reflectType reflect.Type) ([]reflect.StructField, error
 	}
 
 	return fields, nil
+}
+
+func pluck(list interface{}, fieldName string, defaultVal interface{}) interface{} {
+	reflectVal := reflect.ValueOf(list)
+	switch reflectVal.Kind() {
+	case reflect.Array, reflect.Slice:
+		if reflectVal.Len() == 0 {
+			return defaultVal
+		}
+
+		valElem := reflectVal.Type().Elem()
+		for valElem.Kind() == reflect.Ptr {
+			valElem = valElem.Elem()
+		}
+
+		if valElem.Kind() != reflect.Struct {
+			panic("list element is not struct")
+		}
+
+		field, ok := valElem.FieldByName(fieldName)
+		if !ok {
+			panic(fmt.Sprintf("field %s not found", fieldName))
+		}
+
+		result := reflect.MakeSlice(reflect.SliceOf(field.Type), reflectVal.Len(), reflectVal.Len())
+
+		for i := 0; i < reflectVal.Len(); i++ {
+			ev := reflectVal.Index(i)
+			for ev.Kind() == reflect.Ptr {
+				ev = ev.Elem()
+			}
+			if ev.Kind() != reflect.Struct {
+				panic("element is not a struct")
+			}
+			if !ev.IsValid() {
+				continue
+			}
+			result.Index(i).Set(ev.FieldByIndex(field.Index))
+		}
+
+		return result.Interface()
+	default:
+		panic("list must be an array or slice")
+	}
+}
+
+func PluckInt(list interface{}, fieldName string) []int {
+	return pluck(list, fieldName, []int{}).([]int)
+}
+
+func PluckInt32(list interface{}, fieldName string) []int32 {
+	return pluck(list, fieldName, []int32{}).([]int32)
+}
+
+func PluckUint32(list interface{}, fileName string) []uint32 {
+	return pluck(list, fileName, []uint32{}).([]uint32)
+}
+
+func PluckUint64(list interface{}, fieldName string) []uint64 {
+	return pluck(list, fieldName, []uint64{}).([]uint64)
+}
+
+func PluckString(list interface{}, fieldName string) []string {
+	return pluck(list, fieldName, []string{}).([]string)
+}
+
+func MapByKey(list interface{}, fieldName string) interface{} {
+	reflectVal := reflect.ValueOf(list)
+
+	switch reflectVal.Kind() {
+	case reflect.Slice, reflect.Array:
+	default:
+		panic("list required slice or array type")
+	}
+
+	valElem := reflectVal.Type().Elem()
+	deepValElem := valElem
+	for deepValElem.Kind() == reflect.Ptr {
+		deepValElem = deepValElem.Elem()
+	}
+
+	if deepValElem.Kind() != reflect.Struct {
+		panic("element not struct")
+	}
+
+	field, ok := deepValElem.FieldByName(fieldName)
+	if !ok {
+		panic(fmt.Sprintf("field %s not found", fieldName))
+	}
+
+	m := reflect.MakeMapWithSize(reflect.MapOf(field.Type, valElem), reflectVal.Len())
+	for i := 0; i < reflectVal.Len(); i++ {
+		elem := reflectVal.Index(i)
+		elemStruct := elem
+		for elemStruct.Kind() == reflect.Ptr {
+			elemStruct = elemStruct.Elem()
+		}
+
+		// 如果是nil的，意味着key和value同时不存在，所以跳过不处理
+		if !elemStruct.IsValid() {
+			continue
+		}
+
+		if elemStruct.Kind() != reflect.Struct {
+			panic("element not struct")
+		}
+
+		m.SetMapIndex(elemStruct.FieldByIndex(field.Index), elem)
+	}
+
+	return m.Interface()
 }
