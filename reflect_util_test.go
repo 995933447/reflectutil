@@ -5,6 +5,26 @@ import (
 	"testing"
 )
 
+func TestCopySameFields2(t *testing.T) {
+	type A struct {
+	}
+	type B struct {
+		A *A
+		T string
+	}
+
+	var (
+		B2 B
+		B1 B
+	)
+	B2.T = "123"
+	if err := CopySameFields(&B2, &B1); err != nil {
+		t.Log(err.Error())
+	}
+
+	t.Log(B1)
+}
+
 func TestCopySameFields(t *testing.T) {
 	type A struct {
 		A string
@@ -30,9 +50,7 @@ func TestCopySameFields(t *testing.T) {
 		},
 	}
 
-	var b B = B {
-
-	}
+	var b B = B{}
 	if err := CopySameFields(a, &b); err != nil {
 		t.Fatal(err)
 	}

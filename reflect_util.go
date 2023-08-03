@@ -35,7 +35,7 @@ func CopySameFields(src, dest interface{}) error {
 	var tryCopyField func(srcField, destField reflect.Value) bool
 
 	tryCopyField = func(srcField, destField reflect.Value) bool {
-		if !srcField.IsValid() {
+		if !srcField.IsValid() || srcField.IsZero() {
 			destField.Set(reflect.Zero(destField.Type()))
 			return true
 		}
