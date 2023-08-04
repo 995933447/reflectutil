@@ -7,6 +7,8 @@ import (
 
 func TestCopySameFields2(t *testing.T) {
 	type A struct {
+		T2 string
+		M  map[uint]uint32
 	}
 	type B struct {
 		A *A
@@ -18,11 +20,18 @@ func TestCopySameFields2(t *testing.T) {
 		B1 B
 	)
 	B2.T = "123"
+	B2.A = &A{
+		T2: "345",
+		M: map[uint]uint32{
+			1: 2,
+		},
+	}
 	if err := CopySameFields(&B2, &B1); err != nil {
 		t.Log(err.Error())
 	}
 
-	t.Log(B1)
+	t.Logf("%+v", B1)
+	t.Logf("%+v", B1.A)
 }
 
 func TestCopySameFields(t *testing.T) {

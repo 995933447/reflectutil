@@ -40,6 +40,10 @@ func CopySameFields(src, dest interface{}) error {
 			return true
 		}
 
+		if destField.Kind() == reflect.Ptr && (!destField.IsValid() || destField.IsZero()) {
+			destField.Set(reflect.New(destField.Type().Elem()))
+		}
+
 		if destField.Kind() == reflect.Ptr {
 			destField = destField.Elem()
 		}
@@ -57,7 +61,7 @@ func CopySameFields(src, dest interface{}) error {
 		}
 
 		if srcField.Kind() == reflect.Ptr {
-			return tryCopyField(srcField, srcField.Elem())
+			return tryCopyField(srcField.Elem(), destField)
 		}
 
 		return true
